@@ -28,3 +28,17 @@ struct Item {
     name: String,
     durability: u32,
 }
+
+// A slot where items can be equipped (like a weapon hand or armor slot)
+struct EquipmentSlot {
+    slot_type: String,
+    // Notice the special wrappers - we'll explain these!
+    equipped_item: Option<Rc<RefCell<Item>>>,
+}
+
+// The player's inventory (like a backpack)
+struct Inventory {
+    // This looks complex, but it makes sharing between threads safe
+    items: Arc<Mutex<HashMap<u32, Item>>>,
+    capacity: usize,
+}
