@@ -20,7 +20,7 @@ impl fmt::Display for InventoryError {
             InventoryError::FullInventory => write!(f, "Inventory is full"),
             InventoryError::ItemNotFound => write!(f, "Item not found"),
             InventoryError::InvalidSlot => write!(f, "Invalid equipment slot"),
-            InventoryError::EquipError(e) => write!(f, "Equip error: {}", msg),
+            InventoryError::EquipError(e) => write!(f, "Equip error: {}", e),
         }
     }
 }
@@ -88,8 +88,10 @@ impl EquipmentSlot {
     }
 
     pub fn equip(&mut self, item: Rc<RefCell<Item>>) -> Result<Option<Rc<RefCell<Item>>>, String> {
-        // Check if item meets requirements
-        let borrowed_item = item.borrow();
+        // Create a clone of Rc before borrowing
+        let check_item = Rc::clone(&item);
+        let borrowed_item = check_item.borrow();
+
         match &borrowed_item.item_type {
             ItemType::Weapon if self.slot_type != "Weapon" => {
                 return Err("Cannot equip weapon in this slot".to_string())
@@ -100,6 +102,10 @@ impl EquipmentSlot {
             _ => {}
         }
 
+        // borrowed_item is dropped here, releasing the borrow
+        drop(borrowed_item);
+
+        // Now we can safely move item
         Ok(self.equipped_item.replace(item))
     }
 
