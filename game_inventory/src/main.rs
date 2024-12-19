@@ -77,9 +77,78 @@ struct EquipmentSlot {
     equipped_item: Option<Rc<RefCell<Item>>>,
 }
 
+impl EquipmentSlot {
+    pub fn new(slot_type: &str) -> Self {
+        EquipmentSlot {
+            slot_type: slot_type.to_string(),
+            equipped_item: None,
+        }
+    }
+
+    pub fn equip(&mut self, item: Rc<RefCell<Item>>) -> Result<Option<Rc<RefCell<Item>>>, String> {
+        // Check if item meets requirements
+        let borrowed_item = item.borrow();
+        match &borrowed_item.item_type {
+            ItemType::Weapon if self.slot_type != "Weapon" => {
+                return Err("Cannot equip weapon in this slot".to_string())
+            }
+            ItemType::Armor if self.slot_type != "Armor" => {
+                return Err("Cannot equip armor in this slot".to_string())
+            }
+            _ => {}
+        }
+
+        Ok(self.equipped_item.replace(item))
+    }
+
+    pub fn unequip(&mut self) -> Option<Rc<RefCell<Item>>> {
+        self.equipped_item.take()
+    }
+
+    pub fn get_equipped_info(&self) -> String {
+        match &self.equipped_item {
+            Some(item) => format!("{}: {}", self.slot_type, item.borrow().get_info()),
+            None => format!("{}: Empty", self.slot_type),
+        }
+    }
+}
+
 // The player's inventory (like a backpack)
 struct Inventory {
     // This looks complex, but it makes sharing between threads safe
     items: Arc<Mutex<HashMap<u32, Item>>>,
     capacity: usize,
+}
+
+impl Inventory {
+    pub fn new(capacity: usize) -> Self {
+        Inventory {
+            items: Arc::new(Mutex::new(HashMap::new())),
+            capacity,
+        }
+    }
+
+    pub fn add_item(&self, item: Item) -> Result<(), InventoryError> {
+        let mut items = self.items.lock().unwrap();
+        if items.len() >= self.capacity {
+            return Err(InventoryError::FullInventory);
+        }
+        items.insert(item.id, item);
+        Ok(())
+    }
+
+    pub fn remove_item(&self, item_id: u32) -> Result<Item, InventoryError> {
+        let mut items = self.items.lock().unwrap();
+        items.remove(&item_id).ok_or(InventoryError::ItemNotFound)
+    }
+
+    pub fn get_item(&self, item_id: u32) -> Option<Item> {
+        let items = self.items.lock().unwrap();
+        items.get(&item_id).cloned()
+    }
+
+    pub fn list_items(&self) -> Vec<Item> {
+        let items = self.items.lock().unwrap();
+        items.values().cloned().collect()
+    }
 }
