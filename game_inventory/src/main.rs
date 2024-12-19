@@ -1,6 +1,9 @@
-fn main() {
-    println!("Hello, world!");
-}
+use std::collections::HashMap;
+use std::rc::Rc;
+use std::cell::RefCell;
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::fmt;
 
 // Custome error type for inventory operations
 #[derive(Debug)]
@@ -258,4 +261,75 @@ impl Player {
             }
         })
     }
+}
+
+// Example usage and tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_inventory_management() {
+        let player = Player::new("TestPlayer", 10);
+
+        // Create and add items
+        let sword = Item::new(1, "Steel Sword", ItemType::Weapon, 100, 1);
+        let armor = Item::new(2, "Leather Armor", ItemType::Armor, 100, 1);
+
+        assert!(player.inventory.add_item(sword).is_ok());
+        assert!(player.inventory.add_item(armor).is_ok());
+
+        // Verify items were added
+        let items = player.inventory.list_items();
+        assert_eq!(items.len(), 2);
+    }
+
+    #[test]
+    fn test_equipment_management() {
+        let mut player = Player::new("TestPlayer", 10);
+
+        // Create and add a weapon
+        let sword = Item::new(1, "Steel Sword", ItemType::Weapon, 100, 1);
+        player.inventory.add_item(sword).unwrap();
+
+        // Equip the weapon
+        assert!(player.equip_item(1, "Weapon").is_ok());
+
+        // Verify equipment
+        let equipped = player.get_equipped_items();
+        assert!(equipped[0].contains("Steel Sword"));
+    }
+}
+
+// Main function with example usage
+fn main() {
+    // Create a new player
+    let mut player = Player::new("Hero", 20);
+
+    // Create some items
+    let items = vec![
+        Item::new(1, "Steel Sword", ItemType::Weapon, 100, 1),
+        Item::new(2, "Iron Armor", ItemType::Armor, 100, 1),
+        Item::new(3, "Health Potion", ItemType::Consumable, 1, 1),
+    ];
+
+    // Add items to inventory
+    for item in items {
+        player.inventory.add_item(item).unwrap();
+    }
+
+    // Equip some items
+    player.equip_item(1, "Weapon").unwrap();
+    player.equip_item(2, "Armor").unwrap();
+
+    // Print player status
+    println!("{}", player.get_stats());
+    println!("\nEquipped Items:");
+    for item in player.get_equipped_items() {
+        println!("{}", item);
+    }
+
+    // Process inventory in background
+    let handle = player.process_inventory_async();
+    handle.join().unwrap();
 }
