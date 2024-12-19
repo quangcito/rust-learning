@@ -73,7 +73,6 @@ impl Item {
 // A slot where items can be equipped (like a weapon hand or armor slot)
 struct EquipmentSlot {
     slot_type: String,
-    // Notice the special wrappers - we'll explain these!
     equipped_item: Option<Rc<RefCell<Item>>>,
 }
 
@@ -115,7 +114,7 @@ impl EquipmentSlot {
 
 // The player's inventory (like a backpack)
 struct Inventory {
-    // This looks complex, but it makes sharing between threads safe
+    // This makes sharing between threads safe
     items: Arc<Mutex<HashMap<u32, Item>>>,
     capacity: usize,
 }
@@ -167,4 +166,96 @@ pub struct Player {
     inventory: Inventory,
     equipment: HashMap<String, EquipmentSlot>,
     stats: RefCell<PlayerStats>,
+}
+
+impl Player {
+    pub fn new(name: &str, inventory_capacity: usize) -> Self {
+        let mut equipment = HashMap::new();
+        equipment.insert("Weapon".to_string(), EquipmentSlot::new("Weapon"));
+        equipment.insert("Armor".to_string(), EquipmentSlot::new("Armor"));
+
+        Player {
+            name: name.to_string(),
+            inventory: Inventory::new(inventory_capacity),
+            equipment,
+            stats: RefCell::new(PlayerStats {
+                level: 1,
+                strength: 10,
+                defense: 10,
+            }),
+        }
+    }
+
+    pub fn equip_item(&mut self, item_id: u32, slot: &str) -> Result<(), InventoryError> {
+        // Check if slot exists
+        let equipment_slot = self.equipment.get_mut(slot)
+            .ok_or(InventoryError::InvalidSlot)?;
+
+        // Remove item from inventory
+        let item = self.inventory.remove_item(item_id)?;
+
+        // Create shared reference
+        let item_rc = Rc::new(RefCell::new(item));
+
+        // Try to equip item
+        match equipment_slot.equip(item_rc) {
+            Ok(previous_item) => {
+                // If there was a previous item, add it back to inventory
+                if let Some(prev_item) = previous_item {
+                    let item = Rc::try_unwrap(prev_item)
+                        .map_err(|_| InventoryError::EquipError("Failed to unequip item".to_string()))?
+                        .into_inner();
+                    self.inventory.add_item(item)?;
+                }
+                Ok(())
+            }
+            Err(e) => Err(InventoryError::EquipError(e)),
+        }
+    }
+
+    pub fn unequip_item(&mut self, slot: &str) -> Result<(), InventoryError> {
+        let equipment_slot = self.equipment.get_mut(slot)
+            .ok_or(InventoryError::InvalidSlot)?;
+
+        if let Some(item_rc) = equipment_slot.unequip() {
+            let item = Rc::try_unwrap(item_rc)
+                .map_err(|_| InventoryError::EquipError("Failed to unequip item".to_string()))?
+                .into_inner();
+            self.inventory.add_item(item)?;
+        }
+        Ok(())
+    }
+
+    pub fn get_stats(&self) -> String {
+        let stats = self.stats.borrow();
+        format!(
+            "Player: {}\nLevel: {}\nStrength: {}\nDefense: {}",
+            self.name, stats.level, stats.strength, stats.defense
+        )
+    }
+
+    pub fn level_up(&self) {
+        let mut stats = self.stats.borrow_mut();
+        stats.level += 1;
+        stats.strength += 2;
+        stats.defense += 2;
+    }
+
+    pub fn get_equipped_items(&self) -> Vec<String> {
+        self.equipment.iter()
+            .map(|(_, slot)| slot.get_equipped_info())
+            .collect()
+    }
+
+    pub fn process_inventory_async(&self) -> thread::JoinHandle<()> {
+        let inventory_items = Arc::clone(&self.inventory.items);
+        thread::spawn(move || {
+            let items = inventory_items.lock().unwrap();
+            for (id, item) in items.iter() {
+                println!("Processing item {}: {}", id, item.name);
+                // Simulate some processing time
+                thread::sleep(std::time::Duration::from_millis(100));
+            }
+        })
+    }
 }
