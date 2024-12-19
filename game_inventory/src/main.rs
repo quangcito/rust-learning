@@ -305,6 +305,25 @@ mod tests {
         let equipped = player.get_equipped_items();
         assert!(equipped[0].contains("Steel Sword"));
     }
+
+    #[test]
+fn test_inventory_get_and_list() {
+    let player = Player::new("TestPlayer", 10);
+
+    // Add some items
+    let sword = Item::new(1, "Steel Sword", ItemType::Weapon, 100, 1);
+    let armor = Item::new(2, "Leather Armor", ItemType::Armor, 100, 1);
+    player.inventory.add_item(sword).unwrap();
+    player.inventory.add_item(armor).unwrap();
+
+    // Test get_item
+    let item = player.inventory.get_item(1).unwrap();
+    assert_eq!(item.name, "Steel Sword");
+
+    // Test list_items
+    let items = player.inventory.list_items();
+    assert_eq!(items.len(), 2);
+}
 }
 
 // Main function with example usage
