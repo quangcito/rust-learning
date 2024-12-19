@@ -22,13 +22,22 @@ impl fmt::Display for InventoryError {
     }
 }
 
-// An item in the game (like a sword or potion)
-struct Item {
+// Item that can be stored in inventory
+#[derive(Debug, Clone)]
+pub struct Item {
     id: u32,
     name: String,
+    item_type: ItemType,
     durability: u32,
+    level_requirement: u32,
 }
 
+#[derive(Debug, Clone)]
+pub enum ItemType {
+    Weapon,
+    Armor,
+    Consumable,
+}
 
 impl Item {
     pub fn new(id: u32, name: &str, item_type: ItemType, durability: u32, level_req: u32) -> Self {
