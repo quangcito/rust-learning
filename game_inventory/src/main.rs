@@ -29,6 +29,38 @@ struct Item {
     durability: u32,
 }
 
+
+impl Item {
+    pub fn new(id: u32, name: &str, item_type: ItemType, durability: u32, level_req: u32) -> Self {
+        Item {
+            id,
+            name: name.to_string(),
+            item_type,
+            durability,
+            level_requirement: level_req,
+        }
+    }
+
+    pub fn use_item(&mut self) -> Result<(), String> {
+        if self.durability == 0 {
+            return Err("Item has no durability left".to_string());
+        }
+        self.durability -= 1;
+        Ok(())
+    }
+
+    pub fn repair(&mut self, amount: u32) {
+        self.durability += amount;
+    }
+
+    pub fn get_info(&self) -> String {
+        format!(
+            "{}(ID: {}) - Durability: {}/100, Level Req: {}",
+            self.name, self.id, self.durability, self.level_requirement
+        )
+    }
+}
+
 // A slot where items can be equipped (like a weapon hand or armor slot)
 struct EquipmentSlot {
     slot_type: String,
