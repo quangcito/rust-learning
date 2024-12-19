@@ -21,3 +21,10 @@ impl fmt::Display for InventoryError {
         }
     }
 }
+
+// An item in the game (like a sword or potion)
+struct Item {
+    id: u32,
+    name: String,
+    durability: u32,
+}
