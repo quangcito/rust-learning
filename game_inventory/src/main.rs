@@ -152,3 +152,19 @@ impl Inventory {
         items.values().cloned().collect()
     }
 }
+
+// Player stats
+#[derive(Debug)]
+pub struct PlayerStats {
+    level: u32,
+    strength: u32,
+    defense: u32,
+}
+
+// Player that owns both inventory and equipment
+pub struct Player {
+    name: String,
+    inventory: Inventory,
+    equipment: HashMap<String, EquipmentSlot>,
+    stats: RefCell<PlayerStats>,
+}
